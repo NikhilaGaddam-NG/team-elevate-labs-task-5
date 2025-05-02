@@ -1,0 +1,66 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import matplotlib.pyplot as plt
+import seaborn as sns
+import graphviz
+from sklearn import tree
+
+# Load dataset
+data = pd.read_csv('heart.csv')
+print("Dataset shape:", data.shape)
+print(data.head())
+
+# Features and target
+X = data.drop('target', axis=1)
+y = data['target']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# 1. Train a Decision Tree Classifier
+dt = DecisionTreeClassifier(random_state=42)
+dt.fit(X_train, y_train)
+
+# Visualize the Decision Tree
+plt.figure(figsize=(20,10))
+tree.plot_tree(dt, filled=True, feature_names=X.columns, class_names=["No Disease", "Disease"])
+plt.title("Decision Tree Visualization")
+plt.show()
+
+# 2. Analyze Overfitting by restricting depth
+dt_depth_limited = DecisionTreeClassifier(max_depth=4, random_state=42)
+dt_depth_limited.fit(X_train, y_train)
+y_pred_depth_limited = dt_depth_limited.predict(X_test)
+
+print("\nAccuracy with max_depth=4:", accuracy_score(y_test, y_pred_depth_limited))
+
+# 3. Train a Random Forest and compare accuracy
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+y_pred_rf = rf.predict(X_test)
+
+print("\nRandom Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+
+# 4. Feature importances
+importances = rf.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=importances[indices], y=X.columns[indices])
+plt.title("Feature Importances - Random Forest")
+plt.show()
+
+# 5. Cross-validation
+cv_scores_dt = cross_val_score(dt_depth_limited, X, y, cv=5)
+cv_scores_rf = cross_val_score(rf, X, y, cv=5)
+
+print("\nCross-validation Accuracy (Decision Tree, max_depth=4):", cv_scores_dt.mean())
+print("Cross-validation Accuracy (Random Forest):", cv_scores_rf.mean())
+
+# Classification report for Random Forest
+print("\nClassification Report (Random Forest):\n", classification_report(y_test, y_pred_rf))
